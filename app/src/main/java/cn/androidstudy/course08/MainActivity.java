@@ -1,6 +1,10 @@
 package cn.androidstudy.course08;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -21,12 +25,56 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
-
+    private boolean isGranted = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        grantedAndRequest();
     }
+
+    //判断是否授权，如未授权，则申请授权
+    private void grantedAndRequest() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int permission  = checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            //和下面语句等效
+            //int permission  = checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+            //如果已授权
+            if (permission == PackageManager.PERMISSION_GRANTED) {
+                isGranted = true;
+            }else{
+                //未授权，弹对话框，申请授权
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},1);
+            }
+        }else{
+            isGranted = true;
+        }
+    }
+    /**
+     * 处理权限请求结果
+     *
+     * @param requestCode
+     *          请求权限时传入的请求码，用于区别是哪一次请求的
+     *
+     * @param permissions
+     *          所请求的所有权限的数组
+     *
+     * @param grantResults
+     *          权限授予结果，和 permissions 数组参数中的权限一一对应，元素值为两种情况，如下:
+     *          授予: PackageManager.PERMISSION_GRANTED
+     *          拒绝: PackageManager.PERMISSION_DENIED
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode==1){
+            if(grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                isGranted = true;
+            }
+        }
+    }
+
     //同步调用，需要使用线程
     public void getTb(View view){
         new Thread(){
@@ -149,6 +197,11 @@ public class MainActivity extends AppCompatActivity {
 
     //异步下载文件
     public void downAsynFile(View view) {
+        if(!isGranted){
+            Toast.makeText(this, "未获得权限，请授权！", Toast.LENGTH_SHORT).show();
+            grantedAndRequest();
+            return;
+        }
         OkHttpClient mOkHttpClient = new OkHttpClient();
         String url = "http://info.zzuli.edu.cn/picture/article/112/c5/d4/c06282924bcaaa3695c930df89b8/25015014-0fcf-4c1c-83d5-3afd7870872b.jpg";
         Request request = new Request.Builder().url(url).build();
